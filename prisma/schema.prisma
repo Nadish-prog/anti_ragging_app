@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model complaint_logs {
+  log_id             Int        @id @default(autoincrement())
+  complaint_id       Int
+  action_by_user_id  Int?
+  action_description String
+  timestamp          DateTime?  @default(now()) @db.Timestamp(6)
+  users              users?     @relation(fields: [action_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  complaints         complaints @relation(fields: [complaint_id], references: [complaint_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model complaint_status {
+  status_id   Int          @id @default(autoincrement())
+  status_name String       @unique @db.VarChar(30)
+  complaints  complaints[]
+}
+
+model complaints {
+  complaint_id                                Int                 @id @default(autoincrement())
+  student_id                                  Int
+  assigned_faculty_id                         Int?
+  title                                       String              @db.VarChar(200)
+  description                                 String
+  status_id                                   Int
+  severity_id                                 Int
+  location                                    String?             @db.VarChar(100)
+  final_remark                                String?
+  incident_date                               DateTime?           @db.Timestamp(6)
+  created_at                                  DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at                                  DateTime?           @default(now()) @db.Timestamp(6)
+  is_anonymous                                Boolean?            @default(false)
+  complaint_accused                           complaint_accused[]
+  complaint_logs                              complaint_logs[]
+  users_complaints_assigned_faculty_idTousers users?              @relation("complaints_assigned_faculty_idTousers", fields: [assigned_faculty_id], references: [user_id], onUpdate: NoAction)
+  severity_levels                             severity_levels     @relation(fields: [severity_id], references: [severity_id], onDelete: NoAction, onUpdate: NoAction)
+  complaint_status                            complaint_status    @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+  users_complaints_student_idTousers          users               @relation("complaints_student_idTousers", fields: [student_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  evidence                                    evidence[]
+
+  @@index([assigned_faculty_id], map: "idx_complaints_faculty")
+  @@index([status_id], map: "idx_complaints_status")
+  @@index([student_id], map: "idx_complaints_student")
+}
+
+model departments {
+  department_id     Int                 @id @default(autoincrement())
+  department_name   String              @unique @db.VarChar(100)
+  complaint_accused complaint_accused[]
+  users             users[]
+}
+
+model evidence {
+  evidence_id  Int        @id @default(autoincrement())
+  complaint_id Int
+  file_url     String
+  file_type    String?    @db.VarChar(50)
+  uploaded_at  DateTime?  @default(now()) @db.Timestamp(6)
+  complaints   complaints @relation(fields: [complaint_id], references: [complaint_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model roles {
+  role_id   Int     @id @default(autoincrement())
+  role_name String  @unique @db.VarChar(20)
+  users     users[]
+}
+
+model severity_levels {
+  severity_id Int          @id @default(autoincrement())
+  level_name  String       @unique @db.VarChar(20)
+  complaints  complaints[]
+}
+
+model users {
+  user_id                                          Int                 @id @default(autoincrement())
+  full_name                                        String              @db.VarChar(100)
+  email                                            String              @unique @db.VarChar(150)
+  password_hash                                    String              @db.VarChar(255)
+  role_id                                          Int
+  department_id                                    Int?
+  created_at                                       DateTime?           @default(now()) @db.Timestamp(6)
+  phone_no                                         String?             @db.VarChar(15)
+  roll_no                                          String?             @unique @db.VarChar(50)
+  faculty_code                                     String?             @unique @db.VarChar(50)
+  year                                             Int?
+  complaint_accused                                complaint_accused[]
+  complaint_logs                                   complaint_logs[]
+  complaints_complaints_assigned_faculty_idTousers complaints[]        @relation("complaints_assigned_faculty_idTousers")
+  complaints_complaints_student_idTousers          complaints[]        @relation("complaints_student_idTousers")
+  departments                                      departments?        @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
+  roles                                            roles               @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([role_id], map: "idx_users_role")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model complaint_accused {
+  accused_id    Int          @id @default(autoincrement())
+  complaint_id  Int
+  user_id       Int?
+  accused_name  String?      @db.VarChar(100)
+  department_id Int?
+  created_at    DateTime?    @default(now()) @db.Timestamp(6)
+  complaints    complaints   @relation(fields: [complaint_id], references: [complaint_id], onDelete: Cascade, onUpdate: NoAction)
+  departments   departments? @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
+  users         users?       @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
